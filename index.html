@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Kismat se Diwali • Photo Booth</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#fff7eb;background:#1d1420}*{box-sizing:border-box}body{margin:0;min-height:100dvh;background:radial-gradient(ellipse at 50% 0%,#493140 0%,#241923 55%,#170f1a 100%)}main{max-width:720px;margin:auto;padding:22px 17px 46px;text-align:center}.eyebrow{color:#dfb778;letter-spacing:.22em;font-size:12px;font-weight:700;margin:12px 0}h1{font-family:Georgia,serif;font-weight:normal;font-size:clamp(31px,7vw,52px);margin:6px 0;color:#f2d6a8}p{line-height:1.45;color:#e5d7db}.panel{border:1px solid #785b66;border-radius:20px;padding:16px;background:#322431;margin:20px 0}.camera{position:relative;overflow:hidden;border-radius:15px;background:#130f16;aspect-ratio:4/3;max-width:560px;margin:0 auto}video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}.count{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(86px,24vw,170px);font-weight:800;text-shadow:0 3px 18px #000;color:white;pointer-events:none}.btn{border:0;background:#e8bf7f;color:#251627;padding:16px 23px;border-radius:100px;font-weight:800;font-size:17px;cursor:pointer;min-height:50px;margin:5px}.btn.secondary{background:transparent;border:1px solid #d6b47e;color:#f4dba9}.btn:disabled{opacity:.4}.small{font-size:13px;color:#d1bcc7}#status{min-height:28px;color:#eed6ac;font-weight:600}.hidden{display:none!important}canvas#sheet{display:block;width:min(100%,360px);height:auto;margin:12px auto;background:white;box-shadow:0 6px 22px #0008}.actions{display:flex;flex-wrap:wrap;justify-content:center}.tips{margin:30px auto 0;max-width:570px;text-align:left;border-top:1px solid #604453;padding-top:13px}#printArea{display:none}@media print{@page{size:4in 6in;margin:0}html,body{width:4in;height:6in;margin:0;padding:0;background:white!important}body>*:not(#printArea){display:none!important}#printArea{display:block!important;position:absolute;left:0;top:0;width:4in;height:6in;overflow:hidden}#printImage{display:block;width:4in;height:6in;object-fit:fill} }
+</style></head><body>
+<main><div class="eyebrow">THE HAVEN ROOM PRESENTS</div><h1>Kismat se Diwali</h1><p>Strike a pose. Take four photos. Make a memory.</p>
+<section id="intro" class="panel"><p>Four poses • Three-second countdown • One 4×6 photo card</p><button class="btn" id="openBtn">Start Photo Booth</button><p class="small">Camera access stays on your device. No account or payment.</p></section>
+<section id="capture" class="panel hidden"><div class="camera"><video id="video" autoplay muted playsinline></video><div class="count" id="count"></div></div><p id="status">Camera ready</p><button class="btn" id="takeBtn">Take 4 Photos</button><button class="btn secondary" id="switchBtn">Flip Camera</button></section>
+<section id="review" class="panel hidden"><h2>Your photo card ✨</h2><p>Four photos in a 2×2 grid, ready for a 4×6 print. Choose 2 copies in the print dialog.</p><canvas id="sheet" width="1200" height="1800"></canvas><div class="actions"><button class="btn" id="printBtn">Print (choose 2 copies)</button><button class="btn secondary" id="saveBtn">Save / Share</button><button class="btn secondary" id="againBtn">Retake Photos</button></div><p class="small">In the print dialog, select 4×6 photo paper, borderless if available, and correct orientation. Check the preview before printing.</p></section>
+<div class="tips"><p class="small"><strong>Host tips:</strong> Connect your iPad and AirPrint printer to the same Wi‑Fi network. Safari must open this page through HTTPS (or from a secure local host) for camera access. Keep the iPad plugged in. Print output depends on the printer's AirPrint options. Choose 2 copies in the print dialog.</p></div></main><div id="printArea"><img id="printImage" alt="Print sheet"></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id), video=$('video'), count=$('count'), status=$('status'), sheet=$('sheet');
+let stream=null, front=true, busy=false, photos=[];
+const show=id=>['intro','capture','review'].forEach(n=>$(n).classList.toggle('hidden',n!==id));
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+async function startCamera(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:front?'user':'environment',width:{ideal:1920},height:{ideal:1440}}});video.srcObject=stream;await video.play();status.textContent='Camera ready';}catch(e){status.textContent='Could not open camera. Use Safari over HTTPS, and allow Camera permission. '+e.message;}}
+$('openBtn').onclick=async()=>{if(!navigator.mediaDevices?.getUserMedia){alert('Camera unavailable here. Open the page using HTTPS in Safari on your iPhone/iPad.');return;}show('capture');await startCamera();};
+$('switchBtn').onclick=async()=>{if(busy)return;front=!front;await startCamera();};
+function snap(){const c=document.createElement('canvas');c.width=1200;c.height=900;const x=c.getContext('2d');const w=video.videoWidth,h=video.videoHeight;if(!w||!h)throw new Error('Camera not ready');const ratio=Math.max(1200/w,900/h),sw=1200/ratio,sh=900/ratio;x.save();if(front){x.translate(1200,0);x.scale(-1,1);}x.drawImage(video,(w-sw)/2,(h-sh)/2,sw,sh,0,0,1200,900);x.restore();return c;}
+async function countdown(){for(let i=3;i>=1;i--){count.textContent=i;await pause(850);}count.textContent='✦';await pause(230);count.textContent='';}
+$('takeBtn').onclick=async()=>{if(busy||!stream)return;busy=true;$('takeBtn').disabled=true;$('switchBtn').disabled=true;photos=[];try{for(let i=0;i<4;i++){status.textContent=`Photo ${i+1} of 4 — get ready!`;await countdown();photos.push(snap());status.textContent=`Captured ${i+1}/4`;await pause(470);}drawSheet();show('review');}catch(e){status.textContent=e.message;}finally{busy=false;$('takeBtn').disabled=false;$('switchBtn').disabled=false;}};
+function drawSheet(){
+ const c=sheet.getContext('2d');
+ c.fillStyle='#ffffff';c.fillRect(0,0,1200,1800);
+ // Same proportions as the sample: four almost-square photos and a generous lower caption.
+ const outer=35, gap=12, top=48, size=(1200-2*outer-gap)/2;
+ const imageHeight=630;
+ for(let i=0;i<4;i++){
+   const x=outer+(i%2)*(size+gap), y=top+Math.floor(i/2)*(imageHeight+gap);
+   c.fillStyle='#efefef';c.fillRect(x,y,size,imageHeight);
+   const pic=photos[i];
+   const scale=Math.max(size/pic.width,imageHeight/pic.height);
+   const sw=size/scale,sh=imageHeight/scale;
+   c.save();c.beginPath();c.rect(x,y,size,imageHeight);c.clip();
+   c.drawImage(pic,(pic.width-sw)/2,(pic.height-sh)/2,sw,sh,x,y,size,imageHeight);
+   c.restore();
+ }
+ c.textAlign='center';c.fillStyle='#292929';
+ c.font='normal 78px Georgia, Times New Roman, serif';
+ c.fillText('KISMAT SE DIWALI',600,1475);
+ c.fillStyle='#666666';c.font='36px Georgia, Times New Roman, serif';
+ c.fillText('11.07.2026',600,1550);
+ c.font='23px Georgia, Times New Roman, serif';c.fillStyle='#888888';
+ c.fillText('THE HAVEN ROOM',600,1685);
+ $('printImage').src=sheet.toDataURL('image/png');
+}
+$('againBtn').onclick=()=>{show('capture');status.textContent='Ready for another round';};
+$('printBtn').onclick=()=>{if(!photos.length)return;$('printImage').src=sheet.toDataURL('image/png');setTimeout(()=>window.print(),150);};
+$('saveBtn').onclick=async()=>{const blob=await new Promise(r=>sheet.toBlob(r,'image/png'));const file=new File([blob],'kismat-se-diwali-4x6.png',{type:'image/png'});if(navigator.canShare?.({files:[file]})){try{await navigator.share({files:[file],title:'Kismat se Diwali'});return;}catch(e){if(e.name==='AbortError')return;}}const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='kismat-se-diwali-4x6.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);};
+})();
+</script></body></html>
