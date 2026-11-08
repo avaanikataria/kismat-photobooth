@@ -1,52 +1,332 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Kismat se Diwali • Photo Booth</title>
-<style>
-:root{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#fff7eb;background:#1d1420}*{box-sizing:border-box}body{margin:0;min-height:100dvh;background:radial-gradient(ellipse at 50% 0%,#493140 0%,#241923 55%,#170f1a 100%)}main{max-width:720px;margin:auto;padding:22px 17px 46px;text-align:center}.eyebrow{color:#dfb778;letter-spacing:.22em;font-size:12px;font-weight:700;margin:12px 0}h1{font-family:Georgia,serif;font-weight:normal;font-size:clamp(31px,7vw,52px);margin:6px 0;color:#f2d6a8}p{line-height:1.45;color:#e5d7db}.panel{border:1px solid #785b66;border-radius:20px;padding:16px;background:#322431;margin:20px 0}.camera{position:relative;overflow:hidden;border-radius:15px;background:#130f16;aspect-ratio:4/3;max-width:560px;margin:0 auto}video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}.count{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(86px,24vw,170px);font-weight:800;text-shadow:0 3px 18px #000;color:white;pointer-events:none}.btn{border:0;background:#e8bf7f;color:#251627;padding:16px 23px;border-radius:100px;font-weight:800;font-size:17px;cursor:pointer;min-height:50px;margin:5px}.btn.secondary{background:transparent;border:1px solid #d6b47e;color:#f4dba9}.btn:disabled{opacity:.4}.small{font-size:13px;color:#d1bcc7}#status{min-height:28px;color:#eed6ac;font-weight:600}.hidden{display:none!important}canvas#sheet{display:block;width:min(100%,360px);height:auto;margin:12px auto;background:white;box-shadow:0 6px 22px #0008}.actions{display:flex;flex-wrap:wrap;justify-content:center}.tips{margin:30px auto 0;max-width:570px;text-align:left;border-top:1px solid #604453;padding-top:13px}#printArea{display:none}@media print{@page{size:4in 6in;margin:0}html,body{width:4in;height:6in;margin:0;padding:0;background:white!important}body>*:not(#printArea){display:none!important}#printArea{display:block!important;position:absolute;left:0;top:0;width:4in;height:6in;overflow:hidden}#printImage{display:block;width:4in;height:6in;object-fit:fill} }
-</style></head><body>
-<main><div class="eyebrow">THE HAVEN ROOM PRESENTS</div><h1>Kismat se Diwali</h1><p>Strike a pose. Take four photos. Make a memory.</p>
-<section id="intro" class="panel"><p>Four poses • Three-second countdown • One 4×6 photo card</p><button class="btn" id="openBtn">Start Photo Booth</button><p class="small">Camera access stays on your device. No account or payment.</p></section>
-<section id="capture" class="panel hidden"><div class="camera"><video id="video" autoplay muted playsinline></video><div class="count" id="count"></div></div><p id="status">Camera ready</p><button class="btn" id="takeBtn">Take 4 Photos</button><button class="btn secondary" id="switchBtn">Flip Camera</button></section>
-<section id="review" class="panel hidden"><h2>Your photo card ✨</h2><p>Four photos in a 2×2 grid, ready for a 4×6 print. Choose 2 copies in the print dialog.</p><canvas id="sheet" width="1200" height="1800"></canvas><div class="actions"><button class="btn" id="printBtn">Print (choose 2 copies)</button><button class="btn secondary" id="saveBtn">Save / Share</button><button class="btn secondary" id="againBtn">Retake Photos</button></div><p class="small">In the print dialog, select 4×6 photo paper, borderless if available, and correct orientation. Check the preview before printing.</p></section>
-<div class="tips"><p class="small"><strong>Host tips:</strong> Connect your iPad and AirPrint printer to the same Wi‑Fi network. Safari must open this page through HTTPS (or from a secure local host) for camera access. Keep the iPad plugged in. Print output depends on the printer's AirPrint options. Choose 2 copies in the print dialog.</p></div></main><div id="printArea"><img id="printImage" alt="Print sheet"></div>
-<script>
-(()=>{
-const $=id=>document.getElementById(id), video=$('video'), count=$('count'), status=$('status'), sheet=$('sheet');
-let stream=null, front=true, busy=false, photos=[];
-const show=id=>['intro','capture','review'].forEach(n=>$(n).classList.toggle('hidden',n!==id));
-const pause=ms=>new Promise(r=>setTimeout(r,ms));
-async function startCamera(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:front?'user':'environment',width:{ideal:1920},height:{ideal:1440}}});video.srcObject=stream;await video.play();status.textContent='Camera ready';}catch(e){status.textContent='Could not open camera. Use Safari over HTTPS, and allow Camera permission. '+e.message;}}
-$('openBtn').onclick=async()=>{if(!navigator.mediaDevices?.getUserMedia){alert('Camera unavailable here. Open the page using HTTPS in Safari on your iPhone/iPad.');return;}show('capture');await startCamera();};
-$('switchBtn').onclick=async()=>{if(busy)return;front=!front;await startCamera();};
-function snap(){const c=document.createElement('canvas');c.width=1200;c.height=900;const x=c.getContext('2d');const w=video.videoWidth,h=video.videoHeight;if(!w||!h)throw new Error('Camera not ready');const ratio=Math.max(1200/w,900/h),sw=1200/ratio,sh=900/ratio;x.save();if(front){x.translate(1200,0);x.scale(-1,1);}x.drawImage(video,(w-sw)/2,(h-sh)/2,sw,sh,0,0,1200,900);x.restore();return c;}
-async function countdown(){for(let i=3;i>=1;i--){count.textContent=i;await pause(850);}count.textContent='✦';await pause(230);count.textContent='';}
-$('takeBtn').onclick=async()=>{if(busy||!stream)return;busy=true;$('takeBtn').disabled=true;$('switchBtn').disabled=true;photos=[];try{for(let i=0;i<4;i++){status.textContent=`Photo ${i+1} of 4 — get ready!`;await countdown();photos.push(snap());status.textContent=`Captured ${i+1}/4`;await pause(470);}drawSheet();show('review');}catch(e){status.textContent=e.message;}finally{busy=false;$('takeBtn').disabled=false;$('switchBtn').disabled=false;}};
-function drawSheet(){
- const c=sheet.getContext('2d');
- c.fillStyle='#ffffff';c.fillRect(0,0,1200,1800);
- // Same proportions as the sample: four almost-square photos and a generous lower caption.
- const outer=35, gap=12, top=48, size=(1200-2*outer-gap)/2;
- const imageHeight=630;
- for(let i=0;i<4;i++){
-   const x=outer+(i%2)*(size+gap), y=top+Math.floor(i/2)*(imageHeight+gap);
-   c.fillStyle='#efefef';c.fillRect(x,y,size,imageHeight);
-   const pic=photos[i];
-   const scale=Math.max(size/pic.width,imageHeight/pic.height);
-   const sw=size/scale,sh=imageHeight/scale;
-   c.save();c.beginPath();c.rect(x,y,size,imageHeight);c.clip();
-   c.drawImage(pic,(pic.width-sw)/2,(pic.height-sh)/2,sw,sh,x,y,size,imageHeight);
-   c.restore();
- }
- c.textAlign='center';c.fillStyle='#292929';
- c.font='normal 78px Georgia, Times New Roman, serif';
- c.fillText('KISMAT SE DIWALI',600,1475);
- c.fillStyle='#666666';c.font='36px Georgia, Times New Roman, serif';
- c.fillText('11.07.2026',600,1550);
- c.font='23px Georgia, Times New Roman, serif';c.fillStyle='#888888';
- c.fillText('THE HAVEN ROOM',600,1685);
- $('printImage').src=sheet.toDataURL('image/png');
-}
-$('againBtn').onclick=()=>{show('capture');status.textContent='Ready for another round';};
-$('printBtn').onclick=()=>{if(!photos.length)return;$('printImage').src=sheet.toDataURL('image/png');setTimeout(()=>window.print(),150);};
-$('saveBtn').onclick=async()=>{const blob=await new Promise(r=>sheet.toBlob(r,'image/png'));const file=new File([blob],'kismat-se-diwali-4x6.png',{type:'image/png'});if(navigator.canShare?.({files:[file]})){try{await navigator.share({files:[file],title:'Kismat se Diwali'});return;}catch(e){if(e.name==='AbortError')return;}}const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='kismat-se-diwali-4x6.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);};
-})();
-</script></body></html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#ba547b" />
+  <title>Kismat se Diwali — Photo Booth</title>
+
+  <style>
+    /* ---------- EASY TO EDIT: WEBSITE COLORS ---------- */
+    :root {
+      --background: #ba547b;
+      --panel: #fff8f7;
+      --ink: #30212b;
+      --muted: #725d68;
+      --accent: #7b2c50;
+      --gold: #efc887;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100dvh; background: var(--background); color: var(--ink); }
+    main { max-width: 690px; margin: 0 auto; padding: 28px 16px 52px; }
+    header { text-align: center; color: #fff; padding: 7px 0 13px; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .2em; margin: 0 0 7px; }
+    h1 { font: 400 clamp(37px, 8vw, 56px)/1.1 Georgia, serif; margin: 0 0 9px; }
+    header p { margin: 0; color: #fff4f6; line-height: 1.45; }
+    .panel { background: var(--panel); border-radius: 20px; padding: 20px 17px; margin: 18px 0; box-shadow: 0 12px 35px #50203929; }
+    h2 { font-size: 21px; margin: 0 0 7px; }
+    .hint { color: var(--muted); font-size: 14px; line-height: 1.45; margin: 0 0 17px; }
+    .button { appearance: none; border: 0; background: var(--accent); color: #fff; border-radius: 999px; padding: 14px 21px; font: 700 16px/1.2 inherit; font-family: inherit; font-size: 16px; font-weight: 700; min-height: 50px; cursor: pointer; }
+    .button.secondary { background: #fff; color: var(--accent); border: 1.5px solid var(--accent); }
+    .button.gold { background: var(--gold); color: #382135; }
+    .button:disabled { opacity: .45; cursor: not-allowed; }
+    .button:focus-visible, .slot:focus-visible { outline: 3px solid #2e93db; outline-offset: 2px; }
+    .buttons { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+    .upload-main { display: block; text-align: center; margin: 3px auto 15px; }
+    .upload-main input { display: none; }
+    .upload-main .button { display: inline-flex; align-items: center; justify-content: center; }
+    .slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; margin-bottom: 17px; }
+    .slot { border: 2px dashed #d5b5c3; border-radius: 13px; overflow: hidden; background: #fff; position: relative; }
+    .slot label { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 144px; cursor: pointer; color: var(--muted); gap: 4px; font-size: 13px; text-align: center; }
+    .slot label strong { color: var(--ink); }
+    .slot img { display: block; width: 100%; height: 144px; object-fit: cover; }
+    .slot input { display: none; }
+    .slot-footer { display: flex; justify-content: space-between; align-items: center; padding: 7px 9px; gap: 5px; font-size: 12px; }
+    .slot-footer button { border: 0; color: var(--accent); background: #f6e7ed; border-radius: 8px; padding: 7px 9px; cursor: pointer; font-weight: 650; }
+    .slot-footer button:disabled { opacity: .4; }
+    .preview { width: min(100%, 390px); display: block; margin: 12px auto 20px; background: white; box-shadow: 0 6px 21px #0002; }
+    .small { color: var(--muted); font-size: 13px; line-height: 1.5; text-align: center; margin: 12px 0 0; }
+    #message { min-height: 22px; margin: 10px 0; font-size: 14px; color: #7b2c50; text-align: center; font-weight: 600; }
+    .hidden { display: none !important; }
+    footer { color: white; opacity: .9; font-size: 12px; line-height: 1.5; text-align: center; padding: 4px 12px; }
+    @media (max-width: 380px) { .panel { padding: 17px 12px; } .slot label, .slot img { height: 123px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="eyebrow">THE HAVEN ROOM PRESENTS</div>
+      <h1>Kismat se Diwali</h1>
+      <p>Four photos. One keepsake. ✨</p>
+    </header>
+
+    <section class="panel" aria-labelledby="upload-heading">
+      <h2 id="upload-heading">1. Upload your four photos</h2>
+      <p class="hint">Choose four photos from your iPhone's photo library or Files. You can replace or reorder them before creating your card.</p>
+
+      <label class="upload-main">
+        <span class="button">＋ Choose 4 Photos</span>
+        <input id="allPhotos" type="file" accept="image/*" multiple />
+      </label>
+
+      <div id="slots" class="slots"></div>
+      <p id="message" role="status" aria-live="polite"></p>
+      <div class="buttons">
+        <button id="generateBtn" type="button" class="button gold" disabled>Create 4×6 Photo Card</button>
+        <button id="clearBtn" type="button" class="button secondary">Clear Photos</button>
+      </div>
+    </section>
+
+    <section id="resultSection" class="panel hidden" aria-labelledby="result-heading">
+      <h2 id="result-heading">2. Your finished photo card</h2>
+      <p class="hint">Your four photos are combined into one 1200 × 1800 PNG (4×6 inches at 300 pixels per inch).</p>
+      <canvas id="sheet" width="1200" height="1800" class="preview" aria-label="Finished 4 by 6 photo card"></canvas>
+      <div class="buttons">
+        <button id="shareBtn" type="button" class="button gold">Save / Share PNG</button>
+        <button id="downloadBtn" type="button" class="button secondary">Download PNG</button>
+        <button id="editBtn" type="button" class="button secondary">Change Photos</button>
+      </div>
+      <p class="small">On iPhone, tap <strong>Save / Share PNG</strong> → <strong>Print</strong>, select your printer, choose <strong>4 × 6 inches</strong> and set <strong>2 copies</strong>. This shares the PNG image—not the webpage.</p>
+    </section>
+
+    <footer>Your photos are combined on this device. Nothing is uploaded to a server. Keep the final PNG saved until printing is complete.</footer>
+  </main>
+
+  <script>
+    "use strict";
+
+    // ---------- EASY TO EDIT: EVENT TEXT ON THE PRINT ----------
+    const EVENT_TITLE = "KISMAT SE DIWALI";
+    const EVENT_DATE = "11.07.2026";
+    const EVENT_HOST = "THE HAVEN ROOM";
+
+    // ---------- PRINT SIZE: 4×6 INCHES AT 300 PIXELS/INCH ----------
+    const PRINT_WIDTH = 1200;
+    const PRINT_HEIGHT = 1800;
+    const OUTPUT_NAME = "kismat-se-diwali-4x6.png";
+
+    const $ = (id) => document.getElementById(id);
+    const selected = [null, null, null, null]; // Each entry: { image, url, file }
+
+    function setMessage(text) { $("message").textContent = text; }
+    function ready() { return selected.every(Boolean); }
+    function updateButton() { $("generateBtn").disabled = !ready(); }
+
+    // A browser image handles EXIF orientation on iOS for ordinary JPEGs.
+    async function loadPhoto(file) {
+      if (!file || !file.type.startsWith("image/")) {
+        throw new Error("Please select JPG, PNG, or another supported image.");
+      }
+      const url = URL.createObjectURL(file);
+      try {
+        const img = new Image();
+        img.src = url;
+        await img.decode();
+        return { image: img, url, file };
+      } catch (error) {
+        URL.revokeObjectURL(url);
+        throw new Error("One photo could not be opened. Try a JPG or PNG instead.");
+      }
+    }
+
+    function replaceAt(index, photo) {
+      if (selected[index]) URL.revokeObjectURL(selected[index].url);
+      selected[index] = photo;
+    }
+
+    function renderSlots() {
+      const grid = $("slots");
+      grid.replaceChildren();
+
+      selected.forEach((photo, index) => {
+        const slot = document.createElement("div");
+        slot.className = "slot";
+        const label = document.createElement("label");
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.setAttribute("aria-label", `Choose photo ${index + 1}`);
+        input.addEventListener("change", async () => {
+          if (!input.files?.length) return;
+          try {
+            const loaded = await loadPhoto(input.files[0]);
+            replaceAt(index, loaded);
+            setMessage("");
+            $("resultSection").classList.add("hidden");
+            renderSlots();
+          } catch (err) { setMessage(err.message); }
+        });
+
+        if (photo) {
+          const image = document.createElement("img");
+          image.src = photo.url;
+          image.alt = `Photo ${index + 1}`;
+          label.append(image);
+        } else {
+          const add = document.createElement("strong");
+          add.textContent = `＋ Photo ${index + 1}`;
+          const help = document.createElement("span");
+          help.textContent = "Tap to choose";
+          label.append(add, help);
+        }
+        label.append(input);
+        slot.append(label);
+
+        const foot = document.createElement("div");
+        foot.className = "slot-footer";
+        const name = document.createElement("span");
+        name.textContent = `Photo ${index + 1}`;
+        const arrows = document.createElement("div");
+        [
+          ["←", -1, "Move earlier"],
+          ["→", 1, "Move later"]
+        ].forEach(([text, offset, title]) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.textContent = text;
+          btn.title = title;
+          btn.setAttribute("aria-label", `${title}: photo ${index + 1}`);
+          btn.disabled = !photo || index + offset < 0 || index + offset > 3;
+          btn.addEventListener("click", () => {
+            const other = index + offset;
+            [selected[index], selected[other]] = [selected[other], selected[index]];
+            $("resultSection").classList.add("hidden");
+            renderSlots();
+          });
+          arrows.append(btn);
+        });
+        foot.append(name, arrows);
+        slot.append(foot);
+        grid.append(slot);
+      });
+      updateButton();
+    }
+
+    $("allPhotos").addEventListener("change", async (event) => {
+      const files = Array.from(event.target.files || []);
+      if (!files.length) return;
+      if (files.length !== 4) {
+        setMessage(`Choose exactly 4 photos (you selected ${files.length}). You can also add photos one by one.`);
+        event.target.value = "";
+        return;
+      }
+      try {
+        const loaded = await Promise.all(files.map(loadPhoto));
+        loaded.forEach((photo, i) => replaceAt(i, photo));
+        setMessage("Four photos loaded. Ready to create your card!");
+        $("resultSection").classList.add("hidden");
+        renderSlots();
+      } catch (error) { setMessage(error.message); }
+      event.target.value = "";
+    });
+
+    $("clearBtn").addEventListener("click", () => {
+      for (let i = 0; i < 4; i++) replaceAt(i, null);
+      $("resultSection").classList.add("hidden");
+      setMessage("");
+      renderSlots();
+    });
+
+    // ---------- KEEP ORIGINAL 2×2 PHOTO GRID ----------
+    function drawCover(ctx, photo, x, y, width, height) {
+      const img = photo.image;
+      const cropWidth = Math.min(img.naturalWidth, img.naturalHeight * width / height);
+      const cropHeight = cropWidth * height / width;
+      const sx = (img.naturalWidth - cropWidth) / 2;
+      const sy = (img.naturalHeight - cropHeight) / 2;
+      ctx.drawImage(img, sx, sy, cropWidth, cropHeight, x, y, width, height);
+    }
+
+    function buildCard() {
+      const canvas = $("sheet");
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, PRINT_WIDTH, PRINT_HEIGHT);
+
+      // Four photos, with the same positions as the original photo booth.
+      const margin = 35;
+      const gap = 12;
+      const top = 48;
+      const cellWidth = (PRINT_WIDTH - 2 * margin - gap) / 2;
+      const cellHeight = 630;
+
+      selected.forEach((photo, index) => {
+        const x = margin + (index % 2) * (cellWidth + gap);
+        const y = top + Math.floor(index / 2) * (cellHeight + gap);
+        drawCover(ctx, photo, x, y, cellWidth, cellHeight);
+      });
+
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#292929";
+      ctx.font = "normal 78px Georgia, 'Times New Roman', serif";
+      ctx.fillText(EVENT_TITLE, 600, 1475);
+
+      ctx.fillStyle = "#666666";
+      ctx.font = "36px Georgia, 'Times New Roman', serif";
+      ctx.fillText(EVENT_DATE, 600, 1550);
+
+      ctx.fillStyle = "#888888";
+      ctx.font = "23px Georgia, 'Times New Roman', serif";
+      ctx.fillText(EVENT_HOST, 600, 1685);
+    }
+
+    $("generateBtn").addEventListener("click", () => {
+      if (!ready()) return;
+      try {
+        buildCard();
+        $("resultSection").classList.remove("hidden");
+        $("resultSection").scrollIntoView({ behavior: "smooth", block: "start" });
+        setMessage("");
+      } catch (error) { setMessage("Could not generate card: " + error.message); }
+    });
+
+    function pngBlob() {
+      return new Promise((resolve, reject) => {
+        $("sheet").toBlob((blob) => blob ? resolve(blob) : reject(new Error("PNG export failed")), "image/png");
+      });
+    }
+
+    function downloadPNG(blob) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = OUTPUT_NAME;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    }
+
+    $("shareBtn").addEventListener("click", async () => {
+      try {
+        const blob = await pngBlob();
+        const file = new File([blob], OUTPUT_NAME, { type: "image/png" });
+        if (navigator.canShare?.({ files: [file] }) && navigator.share) {
+          try {
+            await navigator.share({ files: [file], title: "Kismat se Diwali" });
+            return;
+          } catch (error) {
+            if (error.name === "AbortError") return; // Person closed share sheet.
+          }
+        }
+        // Fallback for browsers without file sharing (e.g., desktop Chrome).
+        downloadPNG(blob);
+      } catch (error) { alert("Could not share the photo. Try Download PNG instead. " + error.message); }
+    });
+
+    $("downloadBtn").addEventListener("click", async () => {
+      try { downloadPNG(await pngBlob()); }
+      catch (error) { alert("Download failed: " + error.message); }
+    });
+
+    $("editBtn").addEventListener("click", () => {
+      $("resultSection").classList.add("hidden");
+      $("upload-heading").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    renderSlots();
+  </script>
+</body>
+</html>
